@@ -8,6 +8,7 @@ export type Work = {
   title: string,
   artist: string,
   year: number,
+  picture: string;
   museum_id: number
   museum?: Museum
 }
@@ -15,6 +16,6 @@ export type Work = {
 export type Museum = {
   id: number,
   name: string,
-  address: string
+  city: string
   works?: Work[]
 }

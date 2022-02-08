@@ -16,6 +16,7 @@ const db = new Database(
 const initWorks = db.prepare(`CREATE TABLE IF NOT EXISTS works (
   title text NOT NULL,
   artist text NOT NULL,
+  picture text NOT NULL,
   year integer NOT NULL,
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   museum_id INTEGER,
@@ -25,7 +26,7 @@ const initWorks = db.prepare(`CREATE TABLE IF NOT EXISTS works (
 
 const initMuseums = db.prepare(`CREATE TABLE IF NOT EXISTS  museums (
   name text NOT NULL,
-  address text NOT NULL,
+  city text NOT NULL,
   id INTEGER PRIMARY KEY AUTOINCREMENT
 );  `)
 
@@ -44,11 +45,11 @@ const selectMuseumById = (id: number) => db.prepare(`SELECT * FROM museums where
 const selectAllArtsForMuseum = (id: number) => db.prepare(`SELECT * FROM works WHERE museum_id = ?`).all(id);
 const selectMuseumForArt = (id: number) => db.prepare(`SELECT * FROM museums WHERE id = ?`).get(id);
 
-const addWork = ({ title, artist, year, museum_id }: Omit<Work, 'id'>) => db.prepare(`INSERT INTO works (title, artist, year, museum_id) VALUES (?, ?, ?, ?);`)
-  .run(title, artist, year, museum_id);
+export const addWork = ({ title, artist, year, picture, museum_id }: Omit<Work, 'id'>) => db.prepare(`INSERT INTO works (title, artist, year, picture, museum_id) VALUES (?, ?, ?, ?, ?);`)
+  .run(title, artist, year, picture, museum_id);
 
-const addMuseum = ({ name, address }: Omit<Museum, 'id'>) => db.prepare(`INSERT INTO museums (name, address) VALUES (?, ?);`)
-  .run(name, address);
+export const addMuseum = ({ name, city }: Omit<Museum, 'id'>) => db.prepare(`INSERT INTO museums (name, city) VALUES (?, ?);`)
+  .run(name, city);
 
 //#endregion
 
@@ -77,7 +78,7 @@ const getWorksInMuseum = async (museumArg: Museum): Promise<Museum | null> => {
 
 //#region routes
 
-app.get('/works/:id', async (req, res: Resp<Work>) => {
+app.get('/works/:id', async (req: { params: { id: string } }, res: Resp<Work>) => {
   const work = selectWorkById(Number(req.params.id));
 
   if (!work) res.status(400).send({ error: 'Work not found' });
@@ -88,7 +89,7 @@ app.get('/works/:id', async (req, res: Resp<Work>) => {
   res.send({ data: workWithMuseum })
 })
 
-app.get('/museums/:id', async (req, res: Resp<Museum>) => {
+app.get('/museums/:id', async (req: { params: { id: string } }, res: Resp<Museum>) => {
   const museum = selectMuseumById(Number(req.params.id));
   if (!museum) res.status(400).send({ error: 'Museum not found' });
 
@@ -101,10 +102,10 @@ app.get('/museums/:id', async (req, res: Resp<Museum>) => {
 
 
 app.post('/museums', async (req: { body: Omit<Museum, 'id'> }, res: Resp<Museum>) => {
-  if (!req.body.address || !req.body.name) res.status(400).send({ 'error': 'Missing required field' });
+  if (!req.body.city || !req.body.name) res.status(400).send({ 'error': 'Missing required field' });
 
-  const { name, address } = req.body;
-  const info = await addMuseum({ name, address });
+  const { name, city } = req.body;
+  const info = await addMuseum({ name, city });
 
   if (!info.lastInsertRowid) res.status(500).send({ error: 'Could not add museum. Investigate.' });
 
@@ -118,11 +119,11 @@ app.post('/museums', async (req: { body: Omit<Museum, 'id'> }, res: Resp<Museum>
 })
 
 app.post('/works', async (req: { body: Omit<Work, 'id'> }, res: Resp<Work>) => {
-  if (!req.body.artist || !req.body.museum_id || !req.body.title || !req.body.year) res.status(400).send({ 'error': 'Missing required field' });
+  if (!req.body.artist || !req.body.museum_id || !req.body.title || !req.body.year || !req.body.picture) res.status(400).send({ 'error': 'Missing required field' });
 
-  const { artist, museum_id, title, year } = req.body;
+  const { artist, museum_id, title, year, picture } = req.body;
 
-  const info = await addWork({ artist, museum_id, title, year, });
+  const info = await addWork({ artist, museum_id, title, year, picture });
   if (!info.lastInsertRowid) res.status(500).send({ error: 'Could not add piece. Investigate.' });
 
   const work = await selectWorkById(Number(info.lastInsertRowid));
